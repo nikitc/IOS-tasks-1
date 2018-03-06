@@ -28,7 +28,7 @@ extension Note {
                     "content": self.title,
                     "importance": self.importance.rawValue,
                     "uuid": self.uuid,
-                    "color": UIColorToHex(color: self.color)
+                    "color": self.color.htmlRGB
             ]
         }
     }
@@ -38,16 +38,7 @@ extension Note {
                     content: json["content"] as! String,
                     importance: Importance(rawValue: json["importance"] as! String)!,
                     uuid: json["uuid"] as! String,
-                    color: HexToUIColor(hex: json["color"] as! String))
-    }
-    
-    func UIColorToHex(color: UIColor) -> String {
-        return color.htmlRGB
-    }
-    
-    static func HexToUIColor(hex: String) -> UIColor {
-        let rgb = Int(hex, radix: 16) ?? 0
-        return UIColor(rgb: rgb)
+                    color: UIColor(hex: json["color"] as! String))
     }
 }
 
@@ -61,7 +52,9 @@ extension UIColor {
         self.init(red: CGFloat(red) / 255.0, green: CGFloat(green) / 255.0, blue: CGFloat(blue) / 255.0, alpha: 1.0)
     }
     
-    convenience init(rgb: Int) {
+    convenience init(hex: String) {
+        let rgb = Int(hex, radix: 16) ?? 0
+        
         self.init(
             red: (rgb >> 16) & 0xFF,
             green: (rgb >> 8) & 0xFF,
@@ -88,7 +81,6 @@ enum Importance:String {
     case Unimportant
 }
 
-
 class FileNotebook {
     
     private(set) var notes = [Note]()
@@ -98,7 +90,6 @@ class FileNotebook {
             else {
                 return nil
         }
-        
         let path = "\(dir)/notes.plist"
         print(path)
         
@@ -133,7 +124,9 @@ class FileNotebook {
         do {
             try data.write(toFile: FileNotebook.filepath!, atomically: false, encoding: String.Encoding.utf8);
         }
-        catch {/* error handling here */}
+        catch let error {
+            print(error.localizedDescription)
+        }
 
         print(data)
     }
@@ -147,7 +140,9 @@ class FileNotebook {
                 notes.append(Note.parse(json: noteData)!)
             }
         }
-        catch {}
+        catch let error {
+            print(error.localizedDescription)
+        }
         
     }
 }
