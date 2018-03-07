@@ -26,15 +26,20 @@ struct Note {
 extension Note {
     var json: [String: Any] {
         get {
-            return [
-                    "title": self.title,
-                    "content": self.title,
-                    "importance": self.importance.rawValue,
-                    "uuid": self.uuid,
-                    "color": self.color.htmlRGB
-            ]
+            var dict = [String: Any]()
+            dict["title"] = self.title
+            dict["content"] = self.content
+            dict["uuid"] = self.uuid
+            if (self.importance != .normal) {
+                dict["importance"] = self.importance.rawValue
+            }
+            
+            if (self.color != UIColor.white) {
+                dict["color"] = self.color.htmlRGB
+            }
+            
+            return dict
         }
-        //если цвет белый то не сохраняем и importance
     }
     
     static func parse(json: [String: Any]) -> Note? {
@@ -44,13 +49,13 @@ extension Note {
         else {
               return nil
         }
-        let color = UIColor(hex: json["content"] as? String ?? "FFFFFF")
-        let importance = (json["importance"] as? String).flatMap(Importance.init) ?? .Normal
         
+        let color = (json["content"] as? String).flatMap{ UIColor(hex: $0) } ?? UIColor(hex: "FFFFF")
+        let importance = (json["importance"] as? String).flatMap(Importance.init) ?? .normal
         
         return Note(title: title,
                     content: content,
-                    importance: Importance(rawValue: json["importance"] as! String)!,
+                    importance: importance,
                     uuid: uuid,
                     color: color)
     }
@@ -85,14 +90,11 @@ extension UIColor {
     }
 }
 
-//учесть решетку
-
-enum Importance:String {
-    case Important
-    case Normal
-    case Unimportant
+enum Importance: String {
+    case important
+    case normal
+    case unimportant
 }
-//enum c  с мал буквы
 
 class FileNotebook {
     
@@ -117,34 +119,31 @@ class FileNotebook {
     }
     
     func saveAllNotes() {
-        let data = "[" + notes.map { getJsonItem(note: $0) }.joined(separator: ",") + "]"
-        
+        guard let path = FileNotebook.filepath
+            else {
+                return
+        }
         do {
-            try data.write(toFile: FileNotebook.filepath!, atomically: false, encoding: String.Encoding.utf8);
+            let data = try JSONSerialization.data(withJSONObject: notes.map {$0.json}, options: [])
+            guard let strData = String.init(data: data, encoding: .utf8) as String?
+                else {
+                    return
+            }
+            try strData.write(toFile: path, atomically: false, encoding: String.Encoding.utf8)
         }
         catch let error {
             print(error.localizedDescription)
         }
     }
     
-    func getJsonItem(note: Note) -> String {
-        var itemValues = [String]()
-        itemValues.append(getJsonStr(key: "title", value: note.json["title"] as! String))
-        itemValues.append(getJsonStr(key: "content", value: note.json["content"] as! String))
-        itemValues.append(getJsonStr(key: "importance", value: note.json["importance"] as! String))
-        itemValues.append(getJsonStr(key: "uuid", value: note.json["uuid"] as! String))
-        itemValues.append(getJsonStr(key: "color", value: note.json["color"] as! String))
-        
-        return "{" + itemValues.joined(separator: ",") + "}"
-    }
-    
-    func getJsonStr(key: String, value: String) -> String {
-        return "\"\(key)\": \"\(String(describing: (value)))\""
-    }
-    
     func loadNotes() {
+        guard let path = FileNotebook.filepath
+            else {
+                return
+        }
+        
         do {
-            let strData = try String(contentsOfFile: FileNotebook.filepath!, encoding: String.Encoding.utf8)
+            let strData = try String(contentsOfFile: path, encoding: String.Encoding.utf8)
             let data = strData.data(using: String.Encoding.utf8, allowLossyConversion: false)!
             let json = try JSONSerialization.jsonObject(with: data, options: []) as! [[String: AnyObject]]
             for noteData in json {
@@ -158,7 +157,7 @@ class FileNotebook {
 }
 
 var fileNotebook = FileNotebook()
-var testNote = Note(title: "test", content: "data", importance: Importance.Normal, uuid: "22", color: UIColor.black)
+var testNote = Note(title: "test", content: "data", importance: Importance.normal, uuid: "22", color: UIColor.black)
 fileNotebook.add(note: testNote)
 fileNotebook.deleteNote(uuid: "22")
 fileNotebook.add(note: testNote)
