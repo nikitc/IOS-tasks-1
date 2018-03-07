@@ -91,7 +91,6 @@ class FileNotebook {
                 return nil
         }
         let path = "\(dir)/notes.plist"
-        print(path)
         
         return path
     }
@@ -105,21 +104,7 @@ class FileNotebook {
     }
     
     func saveAllNotes() {
-        var data = "["
-        for (index, note) in notes.enumerated() {
-            var currentJson = "{"
-            currentJson += "\"title\": \"\(String(describing: (note.json["title"] as! String)))\","
-            currentJson += "\"content\": \"\(String(describing: (note.json["title"] as! String)))\","
-            currentJson += "\"importance\": \"\(String(describing: (note.json["importance"] as! String)))\","
-            currentJson += "\"uuid\": \"\(String(describing: (note.json["uuid"] as! String)))\","
-            currentJson += "\"color\": \"\(String(describing: (note.json["color"] as! String)))\""
-            currentJson += "}"
-            data += currentJson
-            if index != notes.count - 1 {
-                data += ","
-            }
-        }
-        data += "]"
+        let data = "[" + notes.map { getJsonItem(note: $0) }.joined(separator: ",") + "]"
         
         do {
             try data.write(toFile: FileNotebook.filepath!, atomically: false, encoding: String.Encoding.utf8);
@@ -127,8 +112,21 @@ class FileNotebook {
         catch let error {
             print(error.localizedDescription)
         }
-
-        print(data)
+    }
+    
+    func getJsonItem(note: Note) -> String {
+        var itemValues = [String]()
+        itemValues.append(getJsonStr(key: "title", value: note.json["title"] as! String))
+        itemValues.append(getJsonStr(key: "content", value: note.json["content"] as! String))
+        itemValues.append(getJsonStr(key: "importance", value: note.json["importance"] as! String))
+        itemValues.append(getJsonStr(key: "uuid", value: note.json["uuid"] as! String))
+        itemValues.append(getJsonStr(key: "color", value: note.json["color"] as! String))
+        
+        return "{" + itemValues.joined(separator: ",") + "}"
+    }
+    
+    func getJsonStr(key: String, value: String) -> String {
+        return "\"\(key)\": \"\(String(describing: (value)))\""
     }
     
     func loadNotes() {
@@ -143,17 +141,16 @@ class FileNotebook {
         catch let error {
             print(error.localizedDescription)
         }
-        
     }
 }
 
-var a = FileNotebook()
-var e = Note(title: "test", content: "data", importance: Importance.Normal, uuid: "22", color: UIColor.black)
-a.addNote(note: e)
-a.deleteNote(uuid: "22")
-a.addNote(note: e)
-a.saveAllNotes()
-a.loadNotes()
-print(a.notes)
+var fileNotebook = FileNotebook()
+var testNote = Note(title: "test", content: "data", importance: Importance.Normal, uuid: "22", color: UIColor.black)
+fileNotebook.addNote(note: testNote)
+fileNotebook.deleteNote(uuid: "22")
+fileNotebook.addNote(note: testNote)
+fileNotebook.saveAllNotes()
+fileNotebook.loadNotes()
+print(fileNotebook.notes)
 
 
