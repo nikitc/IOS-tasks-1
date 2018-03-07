@@ -1,6 +1,9 @@
 import UIKit
 
+
 struct Note {
+    static let defaultColor = UIColor.white
+    
     let title: String
     let content: String
     let importance: Importance
@@ -11,7 +14,7 @@ struct Note {
          content: String,
          importance: Importance,
          uuid: String = UUID().uuidString,
-         color: UIColor = UIColor.white) {
+         color: UIColor) {
         self.title = title
         self.content = content
         self.importance = importance
@@ -31,24 +34,31 @@ extension Note {
                     "color": self.color.htmlRGB
             ]
         }
+        //если цвет белый то не сохраняем и importance
     }
     
     static func parse(json: [String: Any]) -> Note? {
-        return Note(title: json["title"] as! String,
-                    content: json["content"] as! String,
+        guard let title = json["title"] as? String,
+              let content = json["content"] as? String,
+              let uuid = json["content"] as? String
+        else {
+              return nil
+        }
+        let color = UIColor(hex: json["content"] as? String ?? "FFFFFF")
+        let importance = (json["importance"] as? String).flatMap(Importance.init) ?? .Normal
+        
+        
+        return Note(title: title,
+                    content: content,
                     importance: Importance(rawValue: json["importance"] as! String)!,
-                    uuid: json["uuid"] as! String,
-                    color: UIColor(hex: json["color"] as! String))
+                    uuid: uuid,
+                    color: color)
     }
 }
 
 
 extension UIColor {
     convenience init(red: Int, green: Int, blue: Int) {
-        assert(red >= 0 && red <= 255, "Invalid red component")
-        assert(green >= 0 && green <= 255, "Invalid green component")
-        assert(blue >= 0 && blue <= 255, "Invalid blue component")
-        
         self.init(red: CGFloat(red) / 255.0, green: CGFloat(green) / 255.0, blue: CGFloat(blue) / 255.0, alpha: 1.0)
     }
     
@@ -75,11 +85,14 @@ extension UIColor {
     }
 }
 
+//учесть решетку
+
 enum Importance:String {
     case Important
     case Normal
     case Unimportant
 }
+//enum c  с мал буквы
 
 class FileNotebook {
     
@@ -95,7 +108,7 @@ class FileNotebook {
         return path
     }
     
-    func addNote(note: Note) {
+    func add(note: Note) {
         notes.append(note)
     }
     
@@ -146,9 +159,9 @@ class FileNotebook {
 
 var fileNotebook = FileNotebook()
 var testNote = Note(title: "test", content: "data", importance: Importance.Normal, uuid: "22", color: UIColor.black)
-fileNotebook.addNote(note: testNote)
+fileNotebook.add(note: testNote)
 fileNotebook.deleteNote(uuid: "22")
-fileNotebook.addNote(note: testNote)
+fileNotebook.add(note: testNote)
 fileNotebook.saveAllNotes()
 fileNotebook.loadNotes()
 print(fileNotebook.notes)
